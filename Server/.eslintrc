@@ -1,0 +1,27 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "extends": ["plugin:@typescript-eslint/recommended", "eslint-config-prettier", "plugin:prettier/recommended"],
+  "parserOptions": { "ecmaVersion": 2016, "sourceType": "module" },
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      {
+        "vars": "all",
+        "args": "after-used",
+        "ignoreRestSiblings": true,
+        "argsIgnorePattern": "^_",
+      },
+    ],
+    "prettier/prettier": [
+        "warn",
+        {
+          "endOfLine": "auto",
+          "tabWidth": 2,
+          "printWidth": 200,
+          "semi": true,
+          "trailingComma": "all",
+          "arrowParens":"always"
+        }    
+      ]
+  }
+}

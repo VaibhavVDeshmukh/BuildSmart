@@ -1,0 +1,9 @@
+/dist
+/logs
+.env.sample
+.env
+launch.bat
+node_modules
+/src/seedScript.ts
+/src/generated
+buildBin.js

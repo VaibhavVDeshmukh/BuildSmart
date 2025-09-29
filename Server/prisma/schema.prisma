@@ -1,0 +1,305 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/client"
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("ACCOUNT_SERVICE_DATABASE_URL")
+}
+
+enum FeatureCategory {
+  EXPORTING
+  DRAWING
+  EDITING
+  MEASURING
+  ANNOTATION
+  AI_FEATURE
+  IMPORTING
+  OTHER
+}
+
+enum PaymentStatus {
+  Success
+  Failed
+  Pending
+}
+
+enum BillingCycle {
+  Monthly
+  Yearly
+}
+
+enum SubscriptionType {
+  trial
+  paid
+}
+
+enum ActionType {
+  Created
+  Updated
+  Deleted
+  Restored
+  Suspended
+  Expired
+}
+
+enum AttachmentType {
+  PDF
+  IMAGE
+  VIDEO
+  DOCUMENT
+  SPREADSHEET
+  ARCHIVE
+  OTHER
+}
+
+enum PaymentTransactionAction {
+  Created
+  Updated
+  StatusChanged
+  AmountChanged
+  Expired
+  Deleted
+}
+
+model Account {
+  id               String           @id @default(uuid())
+  name             String
+  isDeleted        Boolean          @default(false)
+  ownerId          String
+  ownerEmail       String
+  ownerName        String
+  subscription     Subscription?
+  attachments      Attachment[]
+  accountHistories AccountHistory[]
+  subscriptionRequests  SubscriptionRequest[]
+  invoices         Invoice[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  @@index([name])
+}
+
+model AccountHistory {
+  id            Int        @id @default(autoincrement())
+  accountId     String
+  fieldName     String
+  oldValue      String
+  newValue      String
+  changedAt     DateTime   @default(now())
+  changedBy     String //User Id who changed
+  changedByName String //Name of the user who changed (firstName+" "+lastName)
+  action        ActionType
+  account       Account    @relation(fields: [accountId], references: [id])
+}
+
+model Subscription {
+  id                  String                @id @default(uuid())
+  type                SubscriptionType      @default(trial)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  name                String                @unique
+  billingCycle        BillingCycle?
+  startDate           DateTime?
+  expirationDate      DateTime?
+  description         String?
+  maxUser             Int?
+  maxDataSize         Float?
+  reservedDataSize    Float?                @default(0)
+  billingAddressId    Int?
+  subscriptionStatus  SubscriptionStatus
+  accountId           String                @unique
+  owner               String
+  paymentTransaction  PaymentTransaction[]
+  billingAddress      BillingAddress[]
+  moduleSubscription  ModuleSubscriptions[]
+  account             Account               @relation(fields: [accountId], references: [id])
+  subscriptionHistory SubscriptionHistory[]
+  subscriptionRequests     SubscriptionRequest[]      @relation("SubscriptionToSubscriptionRequest")
+  invoices          Invoice[]
+  @@index([subscriptionStatus])
+  @@index([accountId])
+}
+
+model SubscriptionHistory {
+  id             Int          @id @default(autoincrement())
+  subscriptionId String
+  fieldName      String
+  oldValue       String
+  newValue       String
+  changedAt      DateTime     @default(now())
+  changedBy      String       //User Id who changed
+  changedByName  String       //Name of the user who changed (firstName+" "+lastName)
+  action         ActionType
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+}
+
+model BillingAddress {
+  id             Int          @id @default(autoincrement())
+  firstName      String?
+  lastName       String?
+  title          String?
+  company        String?
+  address        String?
+  country        String?
+  state          String?
+  city           String?
+  zip            String?
+  phone          String?
+  phoneCode      String?
+  phoneNumber    String?
+  countryCode    String?
+  companyType    String?
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String
+
+  @@index([company, country])
+}
+
+model PaymentTransaction {
+  id               String           @id @default(uuid())
+  amount           Float
+  status           PaymentStatus
+  paymentMethod    String?
+  transactionDate  DateTime         @default(now())
+  startDate        DateTime
+  expirationDate   DateTime
+  subscriptionType SubscriptionType
+  paidByUserId     String          
+  subscriptionId   String
+  subscription     Subscription     @relation(fields: [subscriptionId], references: [id])
+
+  @@index([subscriptionId])
+  @@index([status])
+}
+
+model Module {
+  id                 Int                   @id @default(autoincrement())
+  name               String                @unique
+  resources          String[]
+  subscriptionId     String?
+  ModuleSubscription ModuleSubscriptions[]
+}
+
+model ModuleSubscriptions {
+  moduleId       Int
+  subscriptionId String
+  module         Module       @relation(fields: [moduleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([moduleId, subscriptionId])
+}
+
+model Attachment {
+  id               String         @id @default(uuid())
+  filename         String
+  url              String
+  type             AttachmentType
+  uploadedAt       DateTime       @default(now())
+  accountId        String
+  account          Account        @relation(fields: [accountId], references: [id])
+  attachedByUserId String
+
+  @@index([accountId])
+  @@index([attachedByUserId])
+}
+
+model Feature {
+  id          Int          @id @default(autoincrement())
+  name        String          @unique
+  category    FeatureCategory
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  usageLogs   FeatureUsageLog[]
+}
+
+model FeatureUsageLog {
+  id         Int      @id @default(autoincrement())
+  featureId  Int
+  timestamp  DateTime @default(now())
+  metadata   Json?    // device, IP, etc.
+  feature    Feature  @relation(fields: [featureId], references: [id])
+}
+
+enum SubscriptionStatus {
+  Pending        // Awaiting payment/admin approval (used in upgrades)
+  Active         // Running
+  Suspended      // Payment failed/blocked by admin
+  Expired        // Ended by time
+  Cancelled      // Explicitly cancelled by user/admin
+}
+enum SubscriptionRequestType {
+  CREATE_PAID_ACCOUNT
+  UPGRADE_SUBSCRIPTION
+  CANCEL_SUBSCRIPTION
+}
+enum SubscriptionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+model SubscriptionRequest {
+  id                 String                @id @default(uuid())
+  type               SubscriptionRequestType
+  status             SubscriptionRequestStatus  @default(PENDING)
+  requestedByUserId  String
+  requestedByName    String
+  requestedByEmail   String
+  accountId          String
+  subscriptionId     String?               // for upgrade/cancel
+  requestedBilling   BillingCycle?
+  requestedMaxUser   Int?
+  requestedMaxDataSize Float?
+  requestedModules   String[]              // module names (snapshot)
+  quotedAmount       Float?                // what we intend to charge 
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  // Approval metadata:
+  reviewedByUserId  String?
+  reviewedByName    String?
+  reviewedAt        DateTime?
+  adminNote         String?   // general note (e.g. for admin-cancel)
+  rejectionReason   String?   // reason when REJECTED
+  cancellationReason String?  // reason when CANCELLED_BY_USER
+  account            Account               @relation(fields: [accountId], references: [id])
+  subscription       Subscription?         @relation("SubscriptionToSubscriptionRequest", fields: [subscriptionId], references: [id])
+  invoices           Invoice[]             // opposite side of Invoice.request
+  @@index([type, status])
+  @@index([accountId])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  VOID
+}
+
+// prisma/schema.prisma (snippet: Invoice model)
+model Invoice {
+  id               String        @id @default(uuid())
+  invoiceNumber    String        @unique
+  accountId        String
+  subscriptionId   String?
+  requestId        String?
+  status           InvoiceStatus  @default(DRAFT)
+  currency         String         @default("INR")
+  subTotal         Float
+  taxAmount        Float          @default(0)
+  discountAmount   Float          @default(0)
+  totalAmount      Float
+  fileUrl          String?
+  issuedAt         DateTime?
+  meta             Json?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  account          Account        @relation(fields: [accountId], references: [id])
+  subscription     Subscription?  @relation(fields: [subscriptionId], references: [id])
+  request          SubscriptionRequest? @relation(fields: [requestId], references: [id])
+
+  @@index([accountId])
+  @@index([requestId])
+}

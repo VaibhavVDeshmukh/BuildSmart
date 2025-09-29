@@ -1,0 +1,18 @@
+{
+  "prettier.printWidth": 200,
+  "cSpell.words": [
+    "autoincrement",
+    "bbox",
+    "externalpath",
+    "folderid",
+    "getsubscription",
+    "jobid",
+    "JOBSTATUS",
+    "NOTSTARTED",
+    "Pano",
+    "perticular",
+    "Potree",
+    "rabbitmq",
+    "scanid"
+  ]
+}
