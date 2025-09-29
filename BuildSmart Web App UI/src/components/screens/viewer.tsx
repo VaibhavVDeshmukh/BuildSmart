@@ -23,6 +23,7 @@ import {
 import IFCViewer from "../ifc-viewer/IFCViewer";
 import FloorPlan2D from "../2d-viewer/FloorPlan2D";
 import FloorPlan3D from "../ifc-viewer/FloorPlan3D";
+import PlanViewer2DOL from "../2d-viewer/FloorPlan2DOL";
 
 interface ViewerScreenProps {
   onScreenChange: (screen: string) => void;
@@ -89,6 +90,12 @@ export function ViewerScreen({ onScreenChange }: ViewerScreenProps) {
             <FloorPlan3D />
           ) : (
             <FloorPlan2D />
+//             <PlanViewer2DOL 
+//   imageUrl="https://i.pinimg.com/1200x/59/f7/d4/59f7d43b756c8419fd5472214684b12e.jpg" 
+//   width={2000}   // original image width
+//   height={1500}  // original image height
+// />
+
           )}
         </div>
 
